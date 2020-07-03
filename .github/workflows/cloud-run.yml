@@ -40,7 +40,7 @@ jobs:
         gcloud run deploy "$SERVICE_NAME" \
           --quiet \
           --region "$RUN_REGION" \
-          --set-env-vars SEABIRD_HOST="$PROD_SEABIRD_HOST",SEABIRD_TOKEN="$PROD_SEABRID_TOKEN",FINNHUB_TOKEN="$PROD_FINNHUB_TOKEN" \
+          --set-env-vars SEABIRD_HOST=${{ secrets.PROD_SEABIRD_HOST }},SEABIRD_TOKEN=${{ secrets.PROD_SEABRID_TOKEN }},FINNHUB_TOKEN=${{ secrets.PROD_FINNHUB_TOKEN }} \
           --image "gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA" \
           --platform "managed" \
           --allow-unauthenticated
