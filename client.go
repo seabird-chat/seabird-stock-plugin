@@ -6,6 +6,7 @@ import (
 	"time"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
+	"github.com/antihax/optional"
 	"github.com/jaredledvina/stock-plugin/pb"
 	"google.golang.org/grpc"
 )
@@ -58,7 +59,19 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 			// TODO: What do we do with the error?
 			fmt.Println(err)
 		}
-		msg := fmt.Sprintf("%s: Current price of %s is: %+v", event.Source.GetUser().GetDisplayName(), ticker, quote.C)
+		profile2, _, err := finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(ticker)})
+		if err != nil {
+			// TODO: What do we do with the error?
+			fmt.Println(err)
+		}
+		var company string
+		if profile2.Name != "" {
+			company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
+		} else {
+			company = fmt.Sprintf("%s", ticker)
+		}
+		// TODO: Don't hardcoded USD here
+		msg := fmt.Sprintf("%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
 		c.reply(event.Source, msg)
 	}()
 }
