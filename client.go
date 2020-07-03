@@ -1,17 +1,12 @@
-package main
+package stock
 
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"time"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/jaredledvina/stock-plugin/pb"
-	"github.com/joho/godotenv"
-	"github.com/mattn/go-isatty"
-	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 )
 
@@ -22,8 +17,9 @@ type SeabirdClient struct {
 	FinnhubToken string
 }
 
-func newSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*SeabirdClient, error) {
-	grpcChannel, err := newGRPCClient(seabirdCoreURL, seabirdCoreToken)
+// NewSeabirdClient returns a new seabird client
+func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*SeabirdClient, error) {
+	grpcChannel, err := NewGRPCClient(seabirdCoreURL, seabirdCoreToken)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +63,8 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	}()
 }
 
-func (c *SeabirdClient) run() error {
+// Run runs
+func (c *SeabirdClient) Run() error {
 	events, err := c.inner.StreamEvents(
 		context.Background(),
 		&pb.StreamEventsRequest{
@@ -97,47 +94,4 @@ func (c *SeabirdClient) run() error {
 			}
 		}
 	}
-}
-
-func main() {
-	// Attempt to load from .env if it exists
-	_ = godotenv.Load()
-
-	var logger zerolog.Logger
-
-	if isatty.IsTerminal(os.Stdout.Fd()) {
-		logger = zerolog.New(zerolog.NewConsoleWriter())
-	} else {
-		logger = zerolog.New(os.Stdout)
-	}
-
-	logger = logger.With().Timestamp().Logger()
-	logger.Level(zerolog.InfoLevel)
-
-	coreURL := os.Getenv("SEABIRD_HOST")
-	coreToken := os.Getenv("SEABIRD_TOKEN")
-	finnhubToken := os.Getenv("FINNHUB_TOKEN")
-
-	if coreURL == "" || coreToken == "" {
-		log.Fatal("Missing SEABIRD_HOST or SEABIRD_TOKEN")
-	}
-
-	if finnhubToken == "" {
-		log.Fatal("Missing FINNHUB_TOKEN")
-	}
-
-	c, err := newSeabirdClient(
-		coreURL,
-		coreToken,
-		finnhubToken,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = c.run()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 }

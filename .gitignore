@@ -64,3 +64,6 @@ Temporary Items
 .history
 
 # End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,macos
+
+# Ignore local .env
+.env

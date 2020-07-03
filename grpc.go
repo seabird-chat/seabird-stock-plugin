@@ -1,4 +1,4 @@
-package main
+package stock
 
 import (
 	"context"
@@ -12,7 +12,25 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-func newGRPCClient(host, token string) (*grpc.ClientConn, error) {
+var _ credentials.PerRPCCredentials = (*grpcTokenAuth)(nil)
+
+type grpcTokenAuth struct {
+	Token    string
+	Insecure bool
+}
+
+func (a grpcTokenAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
+	return map[string]string{
+		"Authorization": "Bearer " + a.Token,
+	}, nil
+}
+
+func (a grpcTokenAuth) RequireTransportSecurity() bool {
+	return !a.Insecure
+}
+
+// NewGRPCClient returns a new GRPC client compatible with seabird
+func NewGRPCClient(host, token string) (*grpc.ClientConn, error) {
 	newCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -60,21 +78,4 @@ func newGRPCClient(host, token string) (*grpc.ClientConn, error) {
 		grpc.WithBlock())
 
 	return conn, err
-}
-
-var _ credentials.PerRPCCredentials = (*grpcTokenAuth)(nil)
-
-type grpcTokenAuth struct {
-	Token    string
-	Insecure bool
-}
-
-func (a grpcTokenAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
-	return map[string]string{
-		"Authorization": "Bearer " + a.Token,
-	}, nil
-}
-
-func (a grpcTokenAuth) RequireTransportSecurity() bool {
-	return !a.Insecure
 }
