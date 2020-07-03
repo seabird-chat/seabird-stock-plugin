@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/jaredledvina/stock-plugin"
+	"github.com/jaredledvina/seabird-stock-plugin"
 	"github.com/joho/godotenv"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"

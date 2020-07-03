@@ -5,13 +5,13 @@ RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/ap
 RUN go get google.golang.org/protobuf/cmd/protoc-gen-go
 RUN go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
-RUN mkdir /build && mkdir /seabird-stock
+RUN mkdir /build && mkdir /seabird-stock-plugin
 
-WORKDIR /seabird-stock
+WORKDIR /seabird-stock-plugin
 ADD ./go.mod ./go.sum ./
 RUN go mod download
 
-ADD ./proto/* /seabird-stock/proto/
+ADD ./proto/* /seabird-stock-plugin/proto/
 
 ADD ./pb/* ./pb/
 RUN go generate ./...
@@ -26,7 +26,7 @@ FROM debian:buster-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy the built seabird into the container
-COPY --from=builder /build/seabird-url-stock /usr/local/bin
+COPY --from=builder /build/seabird-stock-plugin /usr/local/bin
 
 EXPOSE 11236
 

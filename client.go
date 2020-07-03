@@ -7,7 +7,7 @@ import (
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/antihax/optional"
-	"github.com/jaredledvina/stock-plugin/pb"
+	"github.com/jaredledvina/seabird-stock-plugin/pb"
 	"google.golang.org/grpc"
 )
 
