@@ -54,7 +54,7 @@ func main() {
 
 	c, err := stock.NewSeabirdClient(coreURL, coreToken, finnhubToken)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to connect to seabird-core: %s", err)
 	}
 	// create a new handler
 	handler := HTTPHandler{}
