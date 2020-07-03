@@ -49,6 +49,10 @@ func (c *SeabirdClient) reply(source *pb.ChannelSource, msg string) error {
 
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	go func() {
+
+		// TODO: Request debugging
+		fmt.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
+
 		finnhubClient := finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi
 		auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 			Key: c.FinnhubToken,
@@ -99,7 +103,6 @@ func (c *SeabirdClient) Run() error {
 		if err != nil {
 			return err
 		}
-
 		switch v := event.GetInner().(type) {
 		case *pb.Event_Command:
 			if v.Command.Command == "stock" {
