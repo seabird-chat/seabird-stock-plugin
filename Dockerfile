@@ -28,6 +28,4 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 # Copy the built seabird into the container
 COPY --from=builder /build/seabird-stock-plugin /usr/local/bin
 
-EXPOSE 11236
-
 ENTRYPOINT ["/usr/local/bin/seabird-stock-plugin"]
