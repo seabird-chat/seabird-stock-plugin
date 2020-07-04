@@ -48,6 +48,10 @@ func (c *SeabirdClient) reply(source *pb.ChannelSource, msg string) error {
 	return err
 }
 
+func (c *SeabirdClient) replyf(source *pb.ChannelSource, format string, args ...interface{}) error {
+	return c.reply(source, fmt.Sprintf(format, args...))
+}
+
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
@@ -75,9 +79,8 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	} else {
 		company = fmt.Sprintf("%s", ticker)
 	}
-	// TODO: Don't hardcoded USD here
-	msg := fmt.Sprintf("%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
-	c.reply(event.Source, msg)
+	// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
+	c.replyf(event.Source, "%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
 }
 
 // Run runs
