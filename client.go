@@ -3,6 +3,7 @@ package stock
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
@@ -51,7 +52,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	go func() {
 
 		// TODO: Request debugging
-		fmt.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
+		log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 
 		finnhubClient := finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi
 		auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
@@ -61,12 +62,12 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		quote, _, err := finnhubClient.Quote(auth, ticker)
 		if err != nil {
 			// TODO: What do we do with the error?
-			fmt.Println(err)
+			log.Println(err)
 		}
 		profile2, _, err := finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(ticker)})
 		if err != nil {
 			// TODO: What do we do with the error?
-			fmt.Println(err)
+			log.Println(err)
 		}
 		var company string
 		if profile2.Name != "" {
