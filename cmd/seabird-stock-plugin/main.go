@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to seabird-core: %s", err)
 	}
-	log.Printf("Succesfully connected to seabird-core at %s", coreURL)
+	log.Printf("Successfully connected to seabird-core at %s", coreURL)
 
 	err = c.Run()
 	if err != nil {
