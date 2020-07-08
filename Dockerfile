@@ -1,20 +1,11 @@
 # Stage 1: Build the application
 FROM golang:1.14-buster as builder
 
-RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
-RUN go get google.golang.org/protobuf/cmd/protoc-gen-go
-RUN go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
-
 RUN mkdir /build && mkdir /seabird-stock-plugin
 
 WORKDIR /seabird-stock-plugin
 ADD ./go.mod ./go.sum ./
 RUN go mod download
-
-ADD ./proto/* /seabird-stock-plugin/proto/
-
-ADD ./pb/* ./pb/
-RUN go generate ./...
 
 ADD . ./
 

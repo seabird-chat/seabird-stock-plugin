@@ -2,54 +2,37 @@ package stock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"time"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/antihax/optional"
-	"github.com/jaredledvina/seabird-stock-plugin/pb"
-	"google.golang.org/grpc"
+	seabird "github.com/seabird-chat/seabird-go"
+	"github.com/seabird-chat/seabird-go/pb"
 )
 
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
-	grpcChannel  *grpc.ClientConn
-	inner        pb.SeabirdClient
+	*seabird.SeabirdClient
 	FinnhubToken string
 }
 
 // NewSeabirdClient returns a new seabird client
 func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*SeabirdClient, error) {
-	grpcChannel, err := NewGRPCClient(seabirdCoreURL, seabirdCoreToken)
+	seabirdClient, err := seabird.NewSeabirdClient(seabirdCoreURL, seabirdCoreToken)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SeabirdClient{
-		grpcChannel:  grpcChannel,
-		inner:        pb.NewSeabirdClient(grpcChannel),
-		FinnhubToken: finnhubToken,
+		SeabirdClient: seabirdClient,
+		FinnhubToken:  finnhubToken,
 	}, nil
 }
 
 func (c *SeabirdClient) close() error {
-	return c.grpcChannel.Close()
-}
-
-func (c *SeabirdClient) reply(source *pb.ChannelSource, msg string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := c.inner.SendMessage(ctx, &pb.SendMessageRequest{
-		ChannelId: source.GetChannelId(),
-		Text:      msg,
-	})
-	return err
-}
-
-func (c *SeabirdClient) replyf(source *pb.ChannelSource, format string, args ...interface{}) error {
-	return c.reply(source, fmt.Sprintf(format, args...))
+	return c.SeabirdClient.Close()
 }
 
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
@@ -80,32 +63,24 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		company = fmt.Sprintf("%s", ticker)
 	}
 	// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
-	c.replyf(event.Source, "%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
+	c.Replyf(event.Source, "%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
 }
 
 // Run runs
 func (c *SeabirdClient) Run() error {
-	events, err := c.inner.StreamEvents(
-		context.Background(),
-		&pb.StreamEventsRequest{
-			Commands: map[string]*pb.CommandMetadata{
-				"stock": {
-					Name:      "stock",
-					ShortHelp: "<ticker>",
-					FullHelp:  "Returns current stock price for given ticker",
-				},
-			},
+	events, err := c.StreamEvents(map[string]*pb.CommandMetadata{
+		"stock": {
+			Name:      "stock",
+			ShortHelp: "<ticker>",
+			FullHelp:  "Returns current stock price for given ticker",
 		},
-	)
+	})
 	if err != nil {
 		return err
 	}
 
-	for {
-		event, err := events.Recv()
-		if err != nil {
-			return err
-		}
+	defer events.Close()
+	for event := range events.C {
 		switch v := event.GetInner().(type) {
 		case *pb.Event_Command:
 			if v.Command.Command == "stock" {
@@ -113,4 +88,5 @@ func (c *SeabirdClient) Run() error {
 			}
 		}
 	}
+	return errors.New("event stream closed")
 }
