@@ -43,27 +43,35 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 		Key: c.FinnhubToken,
 	})
-	ticker := event.Arg
-	profile2, _, err := finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(ticker)})
+	query := event.Arg
+	profile2, _, err := finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
 	if err != nil {
 		// TODO: What do we do with the error?
 		log.Println(err)
 	}
-	// Use the ticker from the company profile to handle mixed case queries
-	ticker = profile2.Ticker
-	quote, _, err := finnhubClient.Quote(auth, ticker)
-	if err != nil {
-		// TODO: What do we do with the error?
-		log.Println(err)
-	}
-	var company string
-	if profile2.Name != "" {
-		company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
+	log.Printf("profile2 is: %+v\n", profile2)
+
+	// If Finnhub fails to find ticker, we get a 200 back with empty values, so check for a ticker else report failure.
+	if profile2.Ticker != "" {
+		// Use the ticker from the company profile to handle mixed case queries
+		ticker := profile2.Ticker
+		quote, _, err := finnhubClient.Quote(auth, ticker)
+		if err != nil {
+			// TODO: What do we do with the error?
+			log.Println(err)
+		}
+		var company string
+		// If we have a human-readable Name, use that, otherwise fall back to just the ticker
+		if profile2.Name != "" {
+			company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
+		} else {
+			company = fmt.Sprintf("%s", ticker)
+		}
+		// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
+		c.Replyf(event.Source, "%s: %s - Open: $%.2f, Current: $%.2f", event.Source.GetUser().GetDisplayName(), company, quote.O, quote.C)
 	} else {
-		company = fmt.Sprintf("%s", ticker)
+		c.Replyf(event.Source, "%s: Unable to find %s.", event.Source.GetUser().GetDisplayName(), query)
 	}
-	// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
-	c.Replyf(event.Source, "%s: Current price of %s is: $%+v USD", event.Source.GetUser().GetDisplayName(), company, quote.C)
 }
 
 // Run runs
