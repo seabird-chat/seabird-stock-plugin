@@ -3,6 +3,8 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Finnhub-Stock-API/finnhub-go v1.1.7 h1:yEQsRs2TJ5bjIVTLF+6y6Z0QSWhsQgGPktvSuBSysfQ=
 github.com/Finnhub-Stock-API/finnhub-go v1.1.7/go.mod h1:nldVqdx3R6XAuYvZz6Kx1FJsuwCnv402fVLhR/GO2U8=
+github.com/Finnhub-Stock-API/finnhub-go v1.2.1 h1:w87sofevisqJEqQVQRrCXZtba++Us0GKMEnBNh3LzKk=
+github.com/Finnhub-Stock-API/finnhub-go v1.2.1/go.mod h1:nldVqdx3R6XAuYvZz6Kx1FJsuwCnv402fVLhR/GO2U8=
 github.com/antihax/optional v1.0.0 h1:xK2lYat7ZLaVVcIuj82J8kIro4V6kDe0AUDFboUCwcg=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
@@ -44,6 +46,8 @@ github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=
 github.com/rs/zerolog v1.19.0 h1:hYz4ZVdUgjXTBUmrkrw55j1nHx68LfOKIQk5IYtyScg=
 github.com/rs/zerolog v1.19.0/go.mod h1:IzD0RJ65iWH0w97OQQebJEvTZYvsCUm9WVLWBQrJRjo=
+github.com/rs/zerolog v1.20.0 h1:38k9hgtUBdxFwE34yS8rTHmHBa4eN16E4DJlv177LNs=
+github.com/rs/zerolog v1.20.0/go.mod h1:IzD0RJ65iWH0w97OQQebJEvTZYvsCUm9WVLWBQrJRjo=
 github.com/seabird-chat/seabird-go v0.0.0-20200704181743-51e8cbc8819d h1:euZi0Gnc/NIot7atYaSFlFu1SipvE5vw5R4nYmWxURc=
 github.com/seabird-chat/seabird-go v0.0.0-20200704181743-51e8cbc8819d/go.mod h1:rHghMBCsAEvCINx4PMT7KYb852AFDM88HW+Fm8Xh57U=
 github.com/seabird-chat/seabird-go v0.2.5 h1:fBNwBC8iWnls1P0Cv4vWLeoyk8ThdNib9JbOLdKgFx0=
