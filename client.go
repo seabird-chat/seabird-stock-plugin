@@ -67,7 +67,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		} else {
 			company = fmt.Sprintf("%s", ticker)
 		}
-		percentChange := ((quote.O - quote.C) / quote.O) * 100
+		percentChange := ((quote.C - quote.O) / quote.O) * 100
 		// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
 		c.Replyf(event.Source, "%s: %s - Open: $%.2f, Current: $%.2f (%+.2f%%)", event.Source.GetUser().GetDisplayName(), company, quote.O, quote.C, percentChange)
 	} else {
