@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/antihax/optional"
@@ -15,7 +16,9 @@ import (
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
 	*seabird.SeabirdClient
-	FinnhubToken string
+
+	finnhubClient  *finnhub.DefaultApiService
+	finnhubContext context.Context
 }
 
 // NewSeabirdClient returns a new seabird client
@@ -27,7 +30,10 @@ func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*S
 
 	return &SeabirdClient{
 		SeabirdClient: seabirdClient,
-		FinnhubToken:  finnhubToken,
+		finnhubClient: finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi,
+		finnhubContext: context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
+			Key: finnhubToken,
+		}),
 	}, nil
 }
 
@@ -39,49 +45,44 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 
-	finnhubClient := finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi
-	auth := context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
-		Key: c.FinnhubToken,
-	})
 	query := event.Arg
-	profile2, _, err := finnhubClient.CompanyProfile2(auth, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
+
+	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
 	if err != nil {
 		// TODO: What do we do with the error?
 		log.Println(err)
 	}
+
 	log.Printf("profile2 is: %+v\n", profile2)
 
-	// If Finnhub fails to find ticker, we get a 200 back with empty values, so check for a ticker else report failure.
+	// If Finnhub fails to find ticker, we get a 200 back with empty values, so
+	// we set a default ticker/company and only use the profile response if it
+	// has valid values.
+	ticker := strings.ToUpper(query)
 	if profile2.Ticker != "" {
-		// Use the ticker from the company profile to handle mixed case queries
-		ticker := profile2.Ticker
-		quote, _, err := finnhubClient.Quote(auth, ticker)
+		ticker = profile2.Ticker
+	}
+
+	company := ticker
+	if profile2.Name != "" {
+		company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
+	}
+
+	quote, quoteResp, err := c.finnhubClient.Quote(c.finnhubContext, query)
+
+	// XXX: it's pretty terrible, but a content-length of -1 seems to be the
+	// only consistent way to determine if a stock actually exists.
+	if err != nil || quoteResp.ContentLength != -1 {
 		if err != nil {
-			// TODO: What do we do with the error?
 			log.Println(err)
 		}
-		var company string
-		// If we have a human-readable Name, use that, otherwise fall back to just the ticker
-		if profile2.Name != "" {
-			company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
-		} else {
-			company = fmt.Sprintf("%s", ticker)
-		}
+		c.Replyf(event.Source, "%s: Unable to find %s.", event.Source.GetUser().GetDisplayName(), query)
+	} else {
 		percentChange := ((quote.C - quote.O) / quote.O) * 100
 		// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
 		c.Replyf(event.Source, "%s: %s - Open: $%.2f, Current: $%.2f (%+.2f%%)", event.Source.GetUser().GetDisplayName(), company, quote.O, quote.C, percentChange)
-	} else {
-		// If we fail to find the company profile, try to use the raw query
-		quote, _, err := finnhubClient.Quote(auth, query)
-		if err != nil {
-			log.Println(err)
-			c.Replyf(event.Source, "%s: Unable to find %s.", event.Source.GetUser().GetDisplayName(), query)
-		} else {
-			percentChange := ((quote.C - quote.O) / quote.O) * 100
-			// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
-			c.Replyf(event.Source, "%s: %s - Open: $%.2f, Current: $%.2f (%+.2f%%)", event.Source.GetUser().GetDisplayName(), query, quote.O, quote.C, percentChange)
-		}
 	}
+
 }
 
 // Run runs
