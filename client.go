@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
@@ -12,6 +13,30 @@ import (
 	seabird "github.com/seabird-chat/seabird-go"
 	"github.com/seabird-chat/seabird-go/pb"
 )
+
+var stonkReplacements = map[string]string{
+	"1": "1️⃣",
+	"2": "2️⃣",
+	"3": "3️⃣",
+	"4": "4️⃣",
+	"5": "5️⃣",
+	"6": "6️⃣",
+	"7": "7️⃣",
+	"8": "8️⃣",
+	"9": "9️⃣",
+	"0": "0️⃣",
+	"-": "➖",
+	"+": "➕",
+	".": "⏺️",
+	"$": "💲",
+}
+
+func stonkify(in string) string {
+	for k, v := range stonkReplacements {
+		in = strings.ReplaceAll(in, k, v)
+	}
+	return in
+}
 
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
@@ -76,11 +101,25 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		if err != nil {
 			log.Println(err)
 		}
-		c.Replyf(event.Source, "%s: Unable to find %s.", event.Source.GetUser().GetDisplayName(), query)
+		c.MentionReplyf(event.Source, "Unable to find %s.", query)
 	} else {
-		percentChange := ((quote.C - quote.O) / quote.O) * 100
 		// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
-		c.Replyf(event.Source, "%s: %s - Open: $%.2f, Current: $%.2f (%+.2f%%)", event.Source.GetUser().GetDisplayName(), company, quote.O, quote.C, percentChange)
+		if event.Command == "stonk" || event.Command == "stonks" {
+			stonks := "is STONKS ↗️"
+			sign := stonkReplacements["+"]
+			if quote.C <= quote.O {
+				stonks = "is NOT STONKS ↘️"
+				sign = stonkReplacements["-"]
+			}
+
+			current := stonkify(fmt.Sprintf("$%.2f", quote.O))
+			change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(quote.C)-float64(quote.O))))
+
+			c.MentionReplyf(event.Source, "%s %s. %s (%s%s)", company, stonks, current, sign, change)
+		} else {
+			percentChange := ((quote.C - quote.O) / quote.O) * 100
+			c.MentionReplyf(event.Source, "%s - Open: $%.2f, Current: $%.2f (%+.2f%%)", company, quote.O, quote.C, percentChange)
+		}
 	}
 
 }
@@ -102,7 +141,8 @@ func (c *SeabirdClient) Run() error {
 	for event := range events.C {
 		switch v := event.GetInner().(type) {
 		case *pb.Event_Command:
-			if v.Command.Command == "stock" {
+			switch v.Command.Command {
+			case "stock", "stocks", "stonk", "stonks":
 				go c.stockCallback(v.Command)
 			}
 		}
