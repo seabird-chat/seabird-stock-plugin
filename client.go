@@ -10,7 +10,7 @@ import (
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
 	"github.com/antihax/optional"
-	seabird "github.com/seabird-chat/seabird-go"
+	"github.com/seabird-chat/seabird-go"
 	"github.com/seabird-chat/seabird-go/pb"
 )
 
@@ -40,7 +40,7 @@ func stonkify(in string) string {
 
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
-	*seabird.SeabirdClient
+	*seabird.Client
 
 	finnhubClient  *finnhub.DefaultApiService
 	finnhubContext context.Context
@@ -48,13 +48,13 @@ type SeabirdClient struct {
 
 // NewSeabirdClient returns a new seabird client
 func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*SeabirdClient, error) {
-	seabirdClient, err := seabird.NewSeabirdClient(seabirdCoreURL, seabirdCoreToken)
+	seabirdClient, err := seabird.NewClient(seabirdCoreURL, seabirdCoreToken)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SeabirdClient{
-		SeabirdClient: seabirdClient,
+		Client: seabirdClient,
 		finnhubClient: finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi,
 		finnhubContext: context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
 			Key: finnhubToken,
@@ -63,7 +63,7 @@ func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*S
 }
 
 func (c *SeabirdClient) close() error {
-	return c.SeabirdClient.Close()
+	return c.Client.Close()
 }
 
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
