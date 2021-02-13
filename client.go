@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -133,7 +134,10 @@ func (c *SeabirdClient) exchangeCallback(event *pb.CommandEvent) {
 	if err != nil {
 		log.Println(err)
 	}
-	c.MentionReplyf(event.Source, "Supported Exchanges: %v", cryptoExchange)
+
+	sort.Strings(cryptoExchange)
+
+	c.MentionReplyf(event.Source, "Supported Exchanges: %v", strings.Join(cryptoExchange, ", "))
 }
 
 func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
@@ -142,8 +146,19 @@ func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
 		log.Println(err)
 		return
 	}
-	fmt.Printf("%+v\n", cryptoSymbol)
-	c.MentionReplyf(event.Source, "Supported Symbols on %s: %v", strings.Title(strings.ToLower(event.Arg)), cryptoSymbol)
+
+	var symbols []string
+	for _, symbol := range cryptoSymbol {
+		symbols = append(symbols, symbol.DisplaySymbol)
+	}
+
+	sort.Strings(symbols)
+
+	c.MentionReplyf(
+		event.Source,
+		"Supported Symbols on %s: %v",
+		strings.Title(strings.ToLower(event.Arg)),
+		strings.Join(symbols, ", "))
 }
 
 func (c *SeabirdClient) cryptoCallback(event *pb.CommandEvent) {
