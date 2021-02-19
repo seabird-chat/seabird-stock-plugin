@@ -69,25 +69,22 @@ func (c *SeabirdClient) close() error {
 }
 
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
-	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 
-	// TODO(jaredledvina): Capitalize this to support !stock fb
-	query := strings.ToUpper(strings.TrimSpace(event.Arg))
+	ticker := strings.ToUpper(strings.TrimSpace(event.Arg))
 
-	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
+	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(ticker)})
 	if err != nil {
 		// TODO: What do we do with the error?
 		log.Println(err)
 		return
 	}
 
-	log.Printf("profile2 is: %+v\n", profile2)
+	//log.Printf("profile2 is: %+v\n", profile2)
 
 	// If Finnhub fails to find ticker, we get a 200 back with empty values, so
 	// we set a default ticker/company and only use the profile response if it
 	// has valid values.
-	ticker := strings.ToUpper(query)
 	if profile2.Ticker != "" {
 		ticker = profile2.Ticker
 	}
@@ -97,7 +94,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
 	}
 
-	quote, quoteResp, err := c.finnhubClient.Quote(c.finnhubContext, query)
+	quote, quoteResp, err := c.finnhubClient.Quote(c.finnhubContext, ticker)
 
 	// XXX: it's pretty terrible, but a content-length of -1 seems to be the
 	// only consistent way to determine if a stock actually exists.
@@ -106,7 +103,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 			log.Println(err)
 			return
 		}
-		c.MentionReplyf(event.Source, "Unable to find %s.", query)
+		c.MentionReplyf(event.Source, "Unable to find %s.", ticker)
 	} else {
 		// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
 		if event.Command == "stonk" || event.Command == "stonks" {
@@ -130,6 +127,8 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 }
 
 func (c *SeabirdClient) exchangeCallback(event *pb.CommandEvent) {
+	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
+
 	cryptoExchange, _, err := c.finnhubClient.CryptoExchanges(c.finnhubContext)
 	if err != nil {
 		log.Println(err)
@@ -141,6 +140,8 @@ func (c *SeabirdClient) exchangeCallback(event *pb.CommandEvent) {
 }
 
 func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
+	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
+
 	cryptoSymbol, _, err := c.finnhubClient.CryptoSymbols(c.finnhubContext, strings.ToUpper(event.Arg))
 	if err != nil {
 		log.Println(err)
@@ -162,6 +163,8 @@ func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
 }
 
 func (c *SeabirdClient) cryptoCallback(event *pb.CommandEvent) {
+	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
+
 	ticker := strings.ToUpper(strings.TrimSpace(event.Arg))
 	exchange := "COINBASE"
 	currency := "USD"
