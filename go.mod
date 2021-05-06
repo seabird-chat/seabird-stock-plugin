@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/Finnhub-Stock-API/finnhub-go v1.2.1
 	github.com/antihax/optional v1.0.0
-	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/mattn/go-isatty v0.0.12
 	github.com/rs/zerolog v1.20.0
