@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM golang:1.16-buster as builder
+FROM golang:1.17-bullseye as builder
 
 RUN mkdir /build && mkdir /seabird-stock-plugin
 
@@ -12,7 +12,7 @@ ADD . ./
 RUN go build -v -o /build/seabird-stock-plugin ./cmd/seabird-stock-plugin
 
 # Stage 2: Copy files and configure what we need
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
