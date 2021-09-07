@@ -1,0 +1,13 @@
+pipeline:
+  test:
+    image: golang
+    commands:
+      - go build ./cmd/*
+      - go test
+
+  publish:
+    image: plugins/docker
+    repo: seabirdchat/seabird-stock-plugin
+    secrets: [ docker_username, docker_password ]
+    when:
+      branch: main
