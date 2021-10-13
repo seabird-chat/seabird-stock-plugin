@@ -72,8 +72,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 
-	// TODO(jaredledvina): Capitalize this to support !stock fb
-	query := strings.TrimSpace(event.Arg)
+	query := strings.TrimSpace(strings.ToUpper(event.Arg))
 
 	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
 	if err != nil {
@@ -117,7 +116,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 				sign = stonkReplacements["-"]
 			}
 
-			current := stonkify(fmt.Sprintf("$%.2f", quote.O))
+			current := stonkify(fmt.Sprintf("$%.2f", quote.C))
 			change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(quote.C)-float64(quote.O))))
 
 			c.MentionReplyf(event.Source, "%s %s. %s (%s%s)", company, stonks, current, sign, change)
