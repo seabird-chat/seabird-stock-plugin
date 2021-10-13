@@ -72,7 +72,8 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 
-	query := strings.TrimSpace(strings.ToUpper(event.Arg))
+	// TODO(jaredledvina): Capitalize this to support !stock fb
+	query := strings.TrimSpace(event.Arg)
 
 	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(query)})
 	if err != nil {
