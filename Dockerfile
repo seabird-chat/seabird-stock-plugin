@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM golang:1.17-bullseye as builder
+FROM golang:1.19-bullseye as builder
 
 RUN mkdir /build && mkdir /seabird-stock-plugin
 
