@@ -90,7 +90,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 
 	company := ticker
 	if profile2.Name != nil {
-		company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
+		company = fmt.Sprintf("%s (%s)", *profile2.Name, ticker)
 	}
 
 	quote, quoteResp, err := c.finnhubClient.Quote(c.Context).Symbol(ticker).Execute()
@@ -113,13 +113,13 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 				sign = stonkReplacements["-"]
 			}
 
-			current := stonkify(fmt.Sprintf("$%.2f", quote.C))
+			current := stonkify(fmt.Sprintf("$%.2f", *quote.C))
 			change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(*quote.C)-float64(*quote.O))))
 
 			c.MentionReplyf(event.Source, "%s %s. %s (%s%s)", company, stonks, current, sign, change)
 		} else {
 			percentChange := ((*quote.C - *quote.O) / *quote.O) * 100
-			c.MentionReplyf(event.Source, "%s - Open: $%.2f, Current: $%.2f (%+.2f%%)", company, quote.O, quote.C, percentChange)
+			c.MentionReplyf(event.Source, "%s - Open: $%.2f, Current: $%.2f (%+.2f%%)", company, *quote.O, *quote.C, percentChange)
 		}
 	}
 
