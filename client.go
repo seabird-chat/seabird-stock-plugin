@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	finnhub "github.com/Finnhub-Stock-API/finnhub-go"
-	"github.com/antihax/optional"
+	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
 	"github.com/seabird-chat/seabird-go"
 	"github.com/seabird-chat/seabird-go/pb"
 )
@@ -42,10 +41,9 @@ func stonkify(in string) string {
 
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
+	context.Context
 	*seabird.Client
-
-	finnhubClient  *finnhub.DefaultApiService
-	finnhubContext context.Context
+	finnhubClient *finnhub.DefaultApiService
 }
 
 // NewSeabirdClient returns a new seabird client
@@ -55,12 +53,13 @@ func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string) (*S
 		return nil, err
 	}
 
+	finnhubCfg := finnhub.NewConfiguration()
+	finnhubCfg.AddDefaultHeader("X-Finnhub-Token", finnhubToken)
+
 	return &SeabirdClient{
+		Context:       context.Background(),
 		Client:        seabirdClient,
-		finnhubClient: finnhub.NewAPIClient(finnhub.NewConfiguration()).DefaultApi,
-		finnhubContext: context.WithValue(context.Background(), finnhub.ContextAPIKey, finnhub.APIKey{
-			Key: finnhubToken,
-		}),
+		finnhubClient: finnhub.NewAPIClient(finnhubCfg).DefaultApi,
 	}, nil
 }
 
@@ -73,7 +72,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
 	ticker := strings.ToUpper(strings.TrimSpace(event.Arg))
 
-	profile2, _, err := c.finnhubClient.CompanyProfile2(c.finnhubContext, &finnhub.CompanyProfile2Opts{Symbol: optional.NewString(ticker)})
+	profile2, _, err := c.finnhubClient.CompanyProfile2(c.Context).Symbol(ticker).Execute()
 	if err != nil {
 		// TODO: What do we do with the error?
 		log.Println(err)
@@ -85,16 +84,16 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// If Finnhub fails to find ticker, we get a 200 back with empty values, so
 	// we set a default ticker/company and only use the profile response if it
 	// has valid values.
-	if profile2.Ticker != "" {
-		ticker = profile2.Ticker
+	if profile2.Ticker != nil {
+		ticker = *profile2.Ticker
 	}
 
 	company := ticker
-	if profile2.Name != "" {
+	if profile2.Name != nil {
 		company = fmt.Sprintf("%s (%s)", profile2.Name, ticker)
 	}
 
-	quote, quoteResp, err := c.finnhubClient.Quote(c.finnhubContext, ticker)
+	quote, quoteResp, err := c.finnhubClient.Quote(c.Context).Symbol(ticker).Execute()
 
 	// XXX: it's pretty terrible, but a content-length of -1 seems to be the
 	// only consistent way to determine if a stock actually exists.
@@ -109,17 +108,17 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 		if event.Command == "stonk" || event.Command == "stonks" {
 			stonks := "is STONKS ↗️"
 			sign := stonkReplacements["+"]
-			if quote.C <= quote.O {
+			if *quote.C <= *quote.O {
 				stonks = "is NOT STONKS ↘️"
 				sign = stonkReplacements["-"]
 			}
 
 			current := stonkify(fmt.Sprintf("$%.2f", quote.C))
-			change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(quote.C)-float64(quote.O))))
+			change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(*quote.C)-float64(*quote.O))))
 
 			c.MentionReplyf(event.Source, "%s %s. %s (%s%s)", company, stonks, current, sign, change)
 		} else {
-			percentChange := ((quote.C - quote.O) / quote.O) * 100
+			percentChange := ((*quote.C - *quote.O) / *quote.O) * 100
 			c.MentionReplyf(event.Source, "%s - Open: $%.2f, Current: $%.2f (%+.2f%%)", company, quote.O, quote.C, percentChange)
 		}
 	}
@@ -127,7 +126,7 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 }
 
 func (c *SeabirdClient) exchangeCallback(event *pb.CommandEvent) {
-	cryptoExchange, _, err := c.finnhubClient.CryptoExchanges(c.finnhubContext)
+	cryptoExchange, _, err := c.finnhubClient.CryptoExchanges(c.Context).Execute()
 	if err != nil {
 		log.Println(err)
 	}
@@ -138,7 +137,7 @@ func (c *SeabirdClient) exchangeCallback(event *pb.CommandEvent) {
 }
 
 func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
-	cryptoSymbol, _, err := c.finnhubClient.CryptoSymbols(c.finnhubContext, strings.ToUpper(event.Arg))
+	cryptoSymbol, _, err := c.finnhubClient.CryptoSymbols(c.Context).Exchange(strings.ToUpper(event.Arg)).Execute()
 	if err != nil {
 		log.Println(err)
 		return
@@ -146,7 +145,7 @@ func (c *SeabirdClient) symbolsCallback(event *pb.CommandEvent) {
 
 	var symbols []string
 	for _, symbol := range cryptoSymbol {
-		symbols = append(symbols, symbol.DisplaySymbol)
+		symbols = append(symbols, *symbol.DisplaySymbol)
 	}
 
 	sort.Strings(symbols)
@@ -178,7 +177,7 @@ func (c *SeabirdClient) cryptoCallback(event *pb.CommandEvent) {
 	// TODO: we probably don't need to look this up every time - it should be
 	// fine to cache this and use it later. For now, it's not a huge deal to
 	// have an extra call for every lookup.
-	symbols, _, err := c.finnhubClient.CryptoSymbols(c.finnhubContext, exchange)
+	symbols, _, err := c.finnhubClient.CryptoSymbols(c.Context).Exchange(exchange).Execute()
 	if err != nil {
 		c.MentionReply(event.Source, "failed to look up exchange symbols")
 		return
@@ -189,8 +188,8 @@ func (c *SeabirdClient) cryptoCallback(event *pb.CommandEvent) {
 	var query string
 	target := ticker + "/" + currency
 	for _, symbol := range symbols {
-		if symbol.DisplaySymbol == target {
-			query = symbol.Symbol
+		if *symbol.DisplaySymbol == target {
+			query = *symbol.Symbol
 			break
 		}
 	}
@@ -201,18 +200,18 @@ func (c *SeabirdClient) cryptoCallback(event *pb.CommandEvent) {
 	}
 
 	// Gets the candle sticks for the last day and returns the Closed price which appears to an accurate current price
-	cryptoCandles, _, err := c.finnhubClient.CryptoCandles(c.finnhubContext, query, "D", time.Now().AddDate(0, 0, -1).Unix(), time.Now().Unix())
+	cryptoCandles, _, err := c.finnhubClient.CryptoCandles(c.Context).Symbol(query).Resolution("D").From(time.Now().AddDate(0, 0, -1).Unix()).To(time.Now().Unix()).Execute()
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	if len(cryptoCandles.C) == 0 {
+	if len(*cryptoCandles.C) == 0 {
 		c.MentionReply(event.Source, "no results")
 		return
 	}
 
-	current := cryptoCandles.C[0]
+	current := cryptoCandles.C
 	c.MentionReplyf(event.Source, "%s - Current: $%.2f on %s", event.Arg, current, strings.Title(strings.ToLower(exchange)))
 }
 

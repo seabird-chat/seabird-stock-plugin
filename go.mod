@@ -5,8 +5,7 @@ go 1.23
 toolchain go1.23.4
 
 require (
-	github.com/Finnhub-Stock-API/finnhub-go v1.2.1
-	github.com/antihax/optional v1.0.0
+	github.com/Finnhub-Stock-API/finnhub-go/v2 v2.0.19
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.33.0
