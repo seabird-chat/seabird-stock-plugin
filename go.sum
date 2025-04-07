@@ -131,8 +131,8 @@ github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
 github.com/rs/xid v1.6.0/go.mod h1:7XoLgs4eV+QndskICGsho+ADou8ySMSjJKDIan90Nz0=
 github.com/rs/zerolog v1.34.0 h1:k43nTLIwcTVQAncfCw4KZ2VY6ukYoZaBPNOE8txlOeY=
 github.com/rs/zerolog v1.34.0/go.mod h1:bJsvje4Z08ROH4Nhs5iH600c3IkWhwp44iRc54W6wYQ=
-github.com/seabird-chat/seabird-go v0.6.0 h1:X08yGXNiWDsUrNEpsEEKNeELWXItofOq5U26nFKCAiQ=
-github.com/seabird-chat/seabird-go v0.6.0/go.mod h1:FpQi59t2Yy11PD7v1aD9SioEOsD40DeRAvEXOgbb+1o=
+github.com/seabird-chat/seabird-go v0.6.1 h1:lozrMeQK8rmZCodeI+GsWTiRC/SWYaaMlHKdI8oLQVk=
+github.com/seabird-chat/seabird-go v0.6.1/go.mod h1:KQT3mMkfVMlbwdAJSK/zYsni+S8AiAH7oAbvHDcAYrk=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
