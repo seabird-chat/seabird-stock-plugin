@@ -1,2 +1,7 @@
 pb/*.pb.go
 .env
+Dockerfile
+README.md
+LICENSE
+.git
+.github
