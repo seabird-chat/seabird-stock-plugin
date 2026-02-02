@@ -3,7 +3,7 @@ module github.com/jaredledvina/seabird-stock-plugin
 go 1.24.0
 
 require (
-	github.com/Finnhub-Stock-API/finnhub-go/v2 v2.0.20
+	github.com/Finnhub-Stock-API/finnhub-go/v2 v2.0.22
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.34.0
