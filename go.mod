@@ -1,6 +1,6 @@
 module github.com/jaredledvina/seabird-stock-plugin
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/Finnhub-Stock-API/finnhub-go/v2 v2.0.22
