@@ -7,11 +7,53 @@ import (
 	"log"
 	"math"
 	"strings"
+	"time"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
 	"github.com/seabird-chat/seabird-go"
 	"github.com/seabird-chat/seabird-go/pb"
 )
+
+// parsePeriod parses a period string like "30d", "2w", "6m", "1y", or "ytd"
+// into a start time and display label. Returns zero time if invalid.
+func parsePeriod(period string, now time.Time) (time.Time, string) {
+	period = strings.ToLower(strings.TrimSpace(period))
+
+	if period == "ytd" {
+		return time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location()), "YTD"
+	}
+
+	if len(period) < 2 {
+		return time.Time{}, ""
+	}
+
+	unit := period[len(period)-1]
+	numStr := period[:len(period)-1]
+	n := 0
+	for _, c := range numStr {
+		if c < '0' || c > '9' {
+			return time.Time{}, ""
+		}
+		n = n*10 + int(c-'0')
+	}
+	if n <= 0 {
+		return time.Time{}, ""
+	}
+
+	label := strings.ToUpper(period)
+	switch unit {
+	case 'd':
+		return now.AddDate(0, 0, -n), label
+	case 'w':
+		return now.AddDate(0, 0, -n*7), label
+	case 'm':
+		return now.AddDate(0, -n, 0), label
+	case 'y':
+		return now.AddDate(-n, 0, 0), label
+	default:
+		return time.Time{}, ""
+	}
+}
 
 var stonkReplacements = map[string]string{
 	"1": "1️⃣",
@@ -65,10 +107,68 @@ func (c *SeabirdClient) close() error {
 	return c.Client.Close()
 }
 
+func parseTickerAndPeriod(arg string) (string, string) {
+	parts := strings.Fields(arg)
+	if len(parts) < 1 {
+		return "", ""
+	}
+
+	ticker := strings.ToUpper(parts[0])
+
+	if len(parts) >= 2 {
+		periodInput := strings.ToLower(parts[1])
+		if _, label := parsePeriod(periodInput, time.Now()); label != "" {
+			return ticker, periodInput
+		}
+	}
+
+	return ticker, ""
+}
+
+func (c *SeabirdClient) stockPeriodCallback(event *pb.CommandEvent, ticker, company, period string) {
+	now := time.Now()
+	from, label := parsePeriod(period, now)
+	if label == "" {
+		c.MentionReplyf(event.Source, "Invalid period: %s. Use formats like 1d, 2w, 3m, 1y, or ytd.", period)
+		return
+	}
+
+	candles, _, err := c.finnhubClient.StockCandles(c.Context).
+		Symbol(ticker).
+		Resolution("D").
+		From(from.Unix()).
+		To(now.Unix()).
+		Execute()
+	if err != nil {
+		log.Println(err)
+		c.MentionReplyf(event.Source, "Unable to fetch historical data for %s.", ticker)
+		return
+	}
+
+	if candles.S != nil && *candles.S == "no_data" {
+		c.MentionReplyf(event.Source, "No historical data available for %s.", ticker)
+		return
+	}
+
+	if candles.O == nil || candles.C == nil || len(*candles.O) == 0 || len(*candles.C) == 0 {
+		c.MentionReplyf(event.Source, "No historical data available for %s.", ticker)
+		return
+	}
+
+	startPrice := (*candles.O)[0]
+	endPrice := (*candles.C)[len(*candles.C)-1]
+	percentChange := ((endPrice - startPrice) / startPrice) * 100
+
+	c.MentionReplyf(event.Source, "%s — %s: %+.2f%% ($%.2f → $%.2f)", company, label, percentChange, startPrice, endPrice)
+}
+
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	// TODO: Request debugging
 	log.Printf("Processing event: %s %s %s", event.Source, event.Command, event.Arg)
-	ticker := strings.ToUpper(strings.TrimSpace(event.Arg))
+	ticker, period := parseTickerAndPeriod(event.Arg)
+	if ticker == "" {
+		return
+	}
 
 	profile2, _, err := c.finnhubClient.CompanyProfile2(c.Context).Symbol(ticker).Execute()
 	if err != nil {
@@ -89,6 +189,11 @@ func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
 	company := ticker
 	if profile2.Name != nil {
 		company = fmt.Sprintf("%s (%s)", *profile2.Name, ticker)
+	}
+
+	if period != "" {
+		c.stockPeriodCallback(event, ticker, company, period)
+		return
 	}
 
 	quote, quoteResp, err := c.finnhubClient.Quote(c.Context).Symbol(ticker).Execute()
@@ -128,8 +233,8 @@ func (c *SeabirdClient) Run() error {
 	events, err := c.StreamEvents(map[string]*pb.CommandMetadata{
 		"stock": {
 			Name:      "stock",
-			ShortHelp: "<ticker>",
-			FullHelp:  "Returns current stock price for given ticker",
+			ShortHelp: "<ticker> [period]",
+			FullHelp:  "Returns current stock price for given ticker. Optionally specify a period (e.g. 1d, 2w, 3m, 1y, ytd) to see price change.",
 		},
 	})
 	if err != nil {
