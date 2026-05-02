@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM golang:1.24-bullseye AS builder
+FROM golang:1.26.2-trixie AS builder
 
 RUN mkdir /build
 
@@ -12,7 +12,7 @@ COPY . ./
 RUN go build -v -o /build/ ./cmd/*
 
 # Stage 2: Copy files and configure what we need
-FROM debian:bullseye-slim
+FROM debian:13.4-slim
 
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
