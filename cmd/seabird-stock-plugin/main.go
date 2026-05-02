@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	stock "github.com/jaredledvina/seabird-stock-plugin"
@@ -23,29 +22,26 @@ func main() {
 	}
 
 	logger = logger.With().Timestamp().Logger()
-	logger.Level(zerolog.InfoLevel)
 
 	coreURL := os.Getenv("SEABIRD_HOST")
 	coreToken := os.Getenv("SEABIRD_TOKEN")
 	finnhubToken := os.Getenv("FINNHUB_TOKEN")
 
 	if coreURL == "" || coreToken == "" {
-		log.Fatal("Missing SEABIRD_HOST or SEABIRD_TOKEN")
+		logger.Fatal().Msg("Missing SEABIRD_HOST or SEABIRD_TOKEN")
 	}
 
 	if finnhubToken == "" {
-		log.Fatal("Missing FINNHUB_TOKEN")
+		logger.Fatal().Msg("Missing FINNHUB_TOKEN")
 	}
 
-	c, err := stock.NewSeabirdClient(coreURL, coreToken, finnhubToken)
+	c, err := stock.NewSeabirdClient(coreURL, coreToken, finnhubToken, logger)
 	if err != nil {
-		log.Fatalf("Failed to connect to seabird-core: %s", err)
+		logger.Fatal().Err(err).Msg("failed to dial seabird-core")
 	}
-	log.Printf("Successfully connected to seabird-core at %s", coreURL)
+	logger.Info().Str("host", coreURL).Msg("dialed seabird-core")
 
-	err = c.Run()
-	if err != nil {
-		log.Fatal(err)
+	if err := c.Run(); err != nil {
+		logger.Fatal().Err(err).Msg("event stream terminated")
 	}
-
 }
