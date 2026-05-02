@@ -241,7 +241,6 @@ func (c *SeabirdClient) Run() error {
 		return err
 	}
 
-	defer events.Close()
 	for event := range events.C {
 		switch v := event.GetInner().(type) {
 		case *pb.Event_Command:
@@ -251,5 +250,9 @@ func (c *SeabirdClient) Run() error {
 			}
 		}
 	}
-	return errors.New("event stream closed")
+
+	if closeErr := events.Close(); closeErr != nil {
+		return fmt.Errorf("event stream closed: %w", closeErr)
+	}
+	return errors.New("event stream closed without error")
 }
