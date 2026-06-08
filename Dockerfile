@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM golang:1.26.2-trixie AS builder
+FROM golang:1.26.4-trixie AS builder
 
 RUN mkdir /build
 
