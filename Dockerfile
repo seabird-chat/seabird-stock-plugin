@@ -12,7 +12,7 @@ COPY . ./
 RUN go build -v -o /build/ ./cmd/*
 
 # Stage 2: Copy files and configure what we need
-FROM debian:13.4-slim
+FROM debian:13.6-slim
 
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
