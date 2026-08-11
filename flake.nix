@@ -42,7 +42,7 @@
 
           packages.default = pkgs.buildGoModule rec {
             pname = "seabird-stock-plugin";
-            version = "0.6.1-dev";
+            version = "0.6.1";
 
             src = ./.;
 
