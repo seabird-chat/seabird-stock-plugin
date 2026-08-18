@@ -46,7 +46,7 @@
 
             src = ./.;
 
-            vendorHash = "sha256-FyS/NJ7hqBolm4vsJUSME7ryTXqcNW+zN0so1LGicJA=";
+            vendorHash = "sha256-yajj8g0G75FN2dQnZHiraQp/I37I8SDLaiBynniWn28=";
 
             subPackages = [ "cmd/${pname}" ];
 
