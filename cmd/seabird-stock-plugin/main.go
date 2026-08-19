@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	stock "github.com/jaredledvina/seabird-stock-plugin"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
+	stock "github.com/seabird-chat/seabird-stock-plugin"
 )
 
 func main() {

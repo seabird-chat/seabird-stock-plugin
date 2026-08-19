@@ -1,4 +1,4 @@
-module github.com/jaredledvina/seabird-stock-plugin
+module github.com/seabird-chat/seabird-stock-plugin
 
 go 1.26.2
 
