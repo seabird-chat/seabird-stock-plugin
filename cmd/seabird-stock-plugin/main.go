@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	_ "time/tzdata"
 
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
@@ -22,6 +23,7 @@ func main() {
 	coreURL := os.Getenv("SEABIRD_HOST")
 	coreToken := os.Getenv("SEABIRD_TOKEN")
 	finnhubToken := os.Getenv("FINNHUB_TOKEN")
+	command := os.Getenv("SEABIRD_COMMAND")
 
 	if coreURL == "" || coreToken == "" {
 		logger.Fatal().Msg("Missing SEABIRD_HOST or SEABIRD_TOKEN")
@@ -31,7 +33,7 @@ func main() {
 		logger.Fatal().Msg("Missing FINNHUB_TOKEN")
 	}
 
-	c, err := stock.NewSeabirdClient(coreURL, coreToken, finnhubToken, logger)
+	c, err := stock.NewSeabirdClient(coreURL, coreToken, finnhubToken, command, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to dial seabird-core")
 	}

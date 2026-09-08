@@ -4,63 +4,52 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
+	"time"
 
-	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
 	"github.com/rs/zerolog"
 	"github.com/seabird-chat/seabird-go"
 	"github.com/seabird-chat/seabird-go/pb"
 )
 
-var stonkReplacements = map[string]string{
-	"1": "1️⃣",
-	"2": "2️⃣",
-	"3": "3️⃣",
-	"4": "4️⃣",
-	"5": "5️⃣",
-	"6": "6️⃣",
-	"7": "7️⃣",
-	"8": "8️⃣",
-	"9": "9️⃣",
-	"0": "0️⃣",
-	"-": "➖",
-	"+": "➕",
-	".": "⏺️",
-	"$": "💲",
-}
-
-func stonkify(in string) string {
-	for k, v := range stonkReplacements {
-		in = strings.ReplaceAll(in, k, v)
-	}
-	return in
-}
-
 // SeabirdClient is a basic client for seabird
 type SeabirdClient struct {
 	context.Context
 	*seabird.Client
-	finnhubClient *finnhub.DefaultApiService
-	logger        zerolog.Logger
+	market  marketData
+	command string
+	logger  zerolog.Logger
 }
 
+const defaultCommand = "stock"
+
 // NewSeabirdClient returns a new seabird client
-func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken string, logger zerolog.Logger) (*SeabirdClient, error) {
+func NewSeabirdClient(seabirdCoreURL, seabirdCoreToken, finnhubToken, command string, logger zerolog.Logger) (*SeabirdClient, error) {
 	seabirdClient, err := seabird.NewClient(seabirdCoreURL, seabirdCoreToken)
 	if err != nil {
 		return nil, err
 	}
-
-	finnhubCfg := finnhub.NewConfiguration()
-	finnhubCfg.AddDefaultHeader("X-Finnhub-Token", finnhubToken)
+	if command == "" {
+		command = defaultCommand
+	}
 
 	return &SeabirdClient{
-		Context:       context.Background(),
-		Client:        seabirdClient,
-		finnhubClient: finnhub.NewAPIClient(finnhubCfg).DefaultApi,
-		logger:        logger,
+		Context: context.Background(),
+		Client:  seabirdClient,
+		market:  newFinnhubMarket(finnhubToken),
+		command: command,
+		logger:  logger,
 	}, nil
+}
+
+func (c *SeabirdClient) handles(command string) bool {
+	switch command {
+	case c.command, c.command + "s":
+		return true
+	case "stonk", "stonks":
+		return c.command == defaultCommand
+	}
+	return false
 }
 
 func (c *SeabirdClient) close() error {
@@ -74,86 +63,43 @@ func (c *SeabirdClient) reply(source *pb.ChannelSource, format string, args ...i
 }
 
 func (c *SeabirdClient) stockCallback(event *pb.CommandEvent) {
-	ticker := strings.ToUpper(strings.TrimSpace(event.Arg))
+	arg := strings.TrimSpace(event.Arg)
 
 	cmdLog := c.logger.With().
 		Str("command", event.Command).
-		Str("ticker", ticker).
+		Str("arg", arg).
 		Str("channel_id", event.Source.GetChannelId()).
 		Logger()
 
-	profile2, _, err := c.finnhubClient.CompanyProfile2(c.Context).Symbol(ticker).Execute()
+	text, err := respond(c.Context, c.market, event.Command, arg, time.Now())
 	if err != nil {
-		cmdLog.Error().Err(err).Msg("finnhub CompanyProfile2 failed")
-		c.reply(event.Source, "Unable to look up %s.", ticker)
+		cmdLog.Error().Err(err).Msg("finnhub lookup failed")
+		c.reply(event.Source, "Unable to reach Finnhub right now.")
 		return
 	}
-
-	// If Finnhub fails to find ticker, we get a 200 back with empty values, so
-	// we set a default ticker/company and only use the profile response if it
-	// has valid values.
-	if profile2.Ticker != nil {
-		ticker = *profile2.Ticker
-	}
-
-	company := ticker
-	if profile2.Name != nil {
-		company = fmt.Sprintf("%s (%s)", *profile2.Name, ticker)
-	}
-
-	quote, quoteResp, err := c.finnhubClient.Quote(c.Context).Symbol(ticker).Execute()
-
-	// XXX: it's pretty terrible, but a content-length of -1 seems to be the
-	// only consistent way to determine if a stock actually exists.
-	if err != nil || quoteResp.ContentLength != -1 {
-		if err != nil {
-			cmdLog.Error().Err(err).Msg("finnhub Quote failed")
-			c.reply(event.Source, "Unable to fetch quote for %s.", ticker)
-			return
-		}
-		c.reply(event.Source, "Unable to find %s.", ticker)
-		return
-	}
-
-	// TODO: Don't hardcoded USD here - currency requires premium https://finnhub.io/docs/api#company-profile
-	if event.Command == "stonk" || event.Command == "stonks" {
-		stonks := "is STONKS ↗️"
-		sign := stonkReplacements["+"]
-		if *quote.C <= *quote.O {
-			stonks = "is NOT STONKS ↘️"
-			sign = stonkReplacements["-"]
-		}
-
-		current := stonkify(fmt.Sprintf("$%.2f", *quote.C))
-		change := stonkify(fmt.Sprintf("%.2f", math.Abs(float64(*quote.C)-float64(*quote.O))))
-
-		c.reply(event.Source, "%s %s. %s (%s%s)", company, stonks, current, sign, change)
-	} else {
-		percentChange := ((*quote.C - *quote.O) / *quote.O) * 100
-		c.reply(event.Source, "%s - Open: $%.2f, Current: $%.2f (%+.2f%%)", company, *quote.O, *quote.C, percentChange)
-	}
+	cmdLog.Info().Str("reply", text).Msg("handled command")
+	c.reply(event.Source, "%s", text)
 }
 
 // Run runs
 func (c *SeabirdClient) Run() error {
 	events, err := c.StreamEvents(map[string]*pb.CommandMetadata{
-		"stock": {
-			Name:      "stock",
-			ShortHelp: "<ticker>",
-			FullHelp:  "Returns current stock price for given ticker",
+		c.command: {
+			Name:      c.command,
+			ShortHelp: usage(c.command),
+			FullHelp:  "Stock quotes, returns, fundamentals, earnings, analyst ratings, news, and market status from Finnhub",
 		},
 	})
 	if err != nil {
 		return err
 	}
 
-	c.logger.Info().Msg("event stream open")
+	c.logger.Info().Str("command", c.command).Msg("event stream open")
 
 	for event := range events.C {
 		switch v := event.GetInner().(type) {
 		case *pb.Event_Command:
-			switch v.Command.Command {
-			case "stock", "stocks", "stonk", "stonks":
+			if c.handles(v.Command.Command) {
 				go c.stockCallback(v.Command)
 			}
 		}
